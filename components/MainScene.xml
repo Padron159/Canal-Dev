@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="utf-8" ?> 
+
+<!--********** Copyright 2016 Roku Corp.  All Rights Reserved. **********-->
+
+<component name = "MainScene" extends = "Scene" >
+  <script type="text/brightscript" >
+
+    <![CDATA[
+
+    sub init()
+      m.top.backgroundURI = "pkg:/images/rsgetbg.jpg"
+	  m.get_channel_list = m.top.FindNode("get_channel_list")
+      m.get_channel_list.observeField("content","SetContent")  
+	  
+      m.list = m.top.findNode("list")
+      m.list.observeField("itemFocused","setChannel")	
+      m.list.observeField("itemSelected","playChannel")	
+	  
+	  m.video = m.top.findNode("Video")
+      m.video.observeField("state","checkState")
+    
+      showdialog()  
+    end sub
+'-----------------------------------------------------------------------------
+    sub SetContent()
+      m.list.content = m.get_channel_list.content
+      m.list.setFocus(true)
+    end sub
+
+    sub setChannel()
+      content = m.list.content.getChild(m.list.itemFocused) 
+ 	  content.streamFormat = "hls, mp4, mkv"
+    
+      if m.video.content <> invalid and m.video.content.url = content.url return
+      content.HttpSendClientCertificates = true
+      content.HttpCertificatesFile = "common:/certs/ca-bundle.crt"
+      m.video.EnableCookies()
+      m.video.SetCertificatesFile("common:/certs/ca-bundle.crt")
+      m.video.InitClientCertificates()
+      m.video.content = content
+	end sub
+	  
+    sub playChannel()	  
+      m.video.control = "play"
+      m.video.visible = true
+      m.video.setFocus(true)
+    end sub
+'-----------------------------------------------------------------------------
+    sub checkState()
+	    state = m.video.state
+    if(state = "error")
+        m.top.dialog = CreateObject("roSGNode", "Dialog")
+        m.top.dialog.title = "Error: " + str(m.video.errorCode)
+        m.top.dialog.message = m.video.errorMsg
+    end if
+      if (state = "finished") 
+        m.video.control = "stop"
+        m.list.setFocus(true)
+        m.video.visible = false
+      end if
+    end sub
+'-----------------------------------------------------------------------------
+function onKeyEvent(key as String, press as Boolean) as Boolean
+    if press then
+        if key="back" then
+            if m.video.visible then
+	            m.video.visible = false
+                m.video.control="stop"
+                m.list.setFocus(true)
+            end if     
+        else if key="options" then
+		    showdialog()
+        end if   
+    end if
+    return true	
+end function 
+'-----------------------------------------------------------------------------	
+sub showdialog()
+    ddialog = createObject("roSGNode","Dialog")
+    ddialog.backgroundUri = "pkg:/images/negro.jpg"
+    ddialog.title = "Seleccionar lista .m3u"
+    ddialog.buttons=["TV Regio","TV Ragnarok","TV Alex","Peliculas Regio","Peliculas Tecno","Peliculas Alex","Liga MX"]
+    ddialog.optionsDialog=true
+    m.top.dialog = ddialog
+    m.top.dialog.text = m.global.feedurl
+    ddialog.observeFieldScoped("buttonSelected","onKeyPress")
+end sub
+
+sub onKeyPress()
+    if m.top.dialog.buttonSelected = 0
+        m.global.feedurl = "http://srregio.xyz/IPTV/regiotv.m3u"
+        playerclose()
+	else if m.top.dialog.buttonSelected = 1
+	    m.global.feedurl = "http://ragnaroktv.com/tv/lista.m3u"
+        playerclose()
+	else if m.top.dialog.buttonSelected = 2
+        m.global.feedurl = "https://raw.githubusercontent.com/Padron159/Listas/master/TValex"	
+        playerclose()
+	else if m.top.dialog.buttonSelected = 3
+	    m.global.feedurl = "http://srregio.xyz/IPTV/regioflix.m3u"
+        playerclose()
+    else if m.top.dialog.buttonSelected = 4
+        m.global.feedurl = "http://tecnotv.xyz/peliculas.m3u"	
+        playerclose()	
+	else if m.top.dialog.buttonSelected = 5
+        m.global.feedurl = "https://raw.githubusercontent.com/Padron159/Listas/master/PeliculasAlex"	
+        playerclose()		
+	else if m.top.dialog.buttonSelected = 6
+        m.global.feedurl = "http://srregio.xyz/ligamx.m3u"	
+        playerclose()
+    end if
+end sub
+
+sub playerclose()
+        m.top.dialog.close = true
+        m.get_channel_list.control = "RUN"
+end sub	
+	
+    ]]>
+
+  </script>
+  <children>
+
+    <LabelList 
+      id = "list"
+      itemSize = "[ 350, 60 ]"
+      translation = "[ 140, 100 ]" 
+      color = "0x161616FF" 
+	  wrap = "true" />
+ 
+    <Video
+      id = "Video"
+      visible = "false" />
+	  
+    <get_channel_list
+    	id="get_channel_list"
+    	control="STOP"/>
+	
+  </children>
+</component>
